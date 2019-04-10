@@ -17,7 +17,7 @@ object MbsTest {
 
   import org.apache.spark.sql.types.TimestampType
   val mbsNew = mbsNormalized.
-    withColumn("datediff", months_between(current_timestamp(), unix_timestamp($"InsDt", "yyyyMMdd' 'HH:mm:ss").cast(TimestampType))).
+    withColumn("datediff", months_between(current_timestamp(), unix_timestamp(col("InsDt"), "yyyyMMdd' 'HH:mm:ss").cast(TimestampType))).
     withColumn("IsNew", when(col("datediff") <= 24,true).otherwise(false)).
     drop("datediff")
 

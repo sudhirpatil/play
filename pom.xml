@@ -118,6 +118,11 @@
       <artifactId>kafka-clients</artifactId>
       <version>0.11.0.1</version>
     </dependency>
+      <!--<dependency>-->
+          <!--<groupId>org.apache.beam</groupId>-->
+          <!--<artifactId>beam-sdks-java-maven-archetypes-examples</artifactId>-->
+          <!--<version>2.9.0</version>-->
+      <!--</dependency>-->
   </dependencies>
 
   <build>
