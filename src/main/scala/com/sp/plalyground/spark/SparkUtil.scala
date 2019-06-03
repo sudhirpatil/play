@@ -1,6 +1,5 @@
-package com.sp.plalyground
+package com.sp.plalyground.spark
 
-import org.apache.hadoop.hdfs.server.datanode.StorageLocation
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object SparkUtil {

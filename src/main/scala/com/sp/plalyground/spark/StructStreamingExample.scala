@@ -1,7 +1,4 @@
-package com.sp.plalyground
-
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
+package com.sp.plalyground.spark
 
 object StructStreamingExample extends App {
   @transient lazy val log = org.apache.log4j.LogManager.getLogger("StructStreamingExample")
@@ -27,7 +24,6 @@ object StructStreamingExample extends App {
     load()
 
   kafkaInputStream.printSchema()
-  import spark.implicits._
   // cast key, value from binary to String
   val records = kafkaInputStream.
     select(
@@ -42,6 +38,7 @@ object StructStreamingExample extends App {
 //    .as[(String, String)]
 
   import org.apache.spark.sql.streaming._
+
   import scala.concurrent.duration._
   // Write streams to console every 10 secs
   val streamingQueryConsole = records.
@@ -67,7 +64,6 @@ object StructStreamingExample extends App {
   streamingQueryKafka.stop()
 
   //read json
-  import org.apache.spark.sql.types.{StructType,IntegerType,StringType}
   import org.apache.spark.sql.functions._
 //  val schema = StructType().add("a", IntegerType()).add("b", StringType())
   val jsonSchema = spark.sqlContext.read.json("""{"id":"1", "name": "test-name"}""").schema

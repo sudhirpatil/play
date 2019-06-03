@@ -1,5 +1,7 @@
 package com.sp.plalyground
 
+import com.sp.plalyground.spark.SparkUtil
+
 object csvExample extends App {
   val spark = SparkUtil.getSpark()
 

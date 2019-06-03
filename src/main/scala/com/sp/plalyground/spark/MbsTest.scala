@@ -1,7 +1,4 @@
-package com.sp.plalyground
-
-
-
+package com.sp.plalyground.spark
 
 object MbsTest {
   val spark = SparkUtil.getSpark()
