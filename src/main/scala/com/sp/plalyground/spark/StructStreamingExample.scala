@@ -1,5 +1,7 @@
 package com.sp.plalyground.spark
 
+import org.apache.spark.sql.SparkSession
+
 object StructStreamingExample extends App {
   @transient lazy val log = org.apache.log4j.LogManager.getLogger("StructStreamingExample")
 
@@ -8,11 +10,14 @@ object StructStreamingExample extends App {
   @transient lazy val master = System.getProperty("spark.master", "local[4]")
   @transient lazy val logLevel = System.getProperty("SparkUtil.logLevel", "INFO")
 
+  // Create spark session aka spark
   val spark = SparkSession.builder()
     .master(master)
     .appName(appName)
 //    .enableHiveSupport()
     .getOrCreate()
+  // Implicit import for sql functions
+  import spark.implicits._
 
   // read from kafka
   val kafkaInputStream = spark.

@@ -3,18 +3,20 @@ package com.sp.plalyground.spark
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object SparkUtil {
-  def getSpark(): SparkSession = {
-    @transient lazy val log = org.apache.log4j.LogManager.getLogger("StructStreamingExample")
+  @transient lazy val log = org.apache.log4j.LogManager.getLogger("StructStreamingExample")
+  @transient lazy val sparkPartitions = System.getProperty("SparkUtil.sparkPartitions", "50")
+  @transient lazy val appName = System.getProperty("SparkUtil.appName", "StructStreamingExample")
+  @transient lazy val master = System.getProperty("spark.master", "local[4]")
+  @transient lazy val logLevel = System.getProperty("SparkUtil.logLevel", "INFO")
 
-    @transient lazy val sparkPartitions = System.getProperty("SparkUtil.sparkPartitions", "50")
-    @transient lazy val appName = System.getProperty("SparkUtil.appName", "StructStreamingExample")
-    @transient lazy val master = System.getProperty("spark.master", "local[4]")
-    @transient lazy val logLevel = System.getProperty("SparkUtil.logLevel", "INFO")
+  @transient lazy val spark = getSpark()
+
+  def getSpark(): SparkSession = {
 
     SparkSession.builder()
       .master(master)
       .appName(appName)
-      //    .enableHiveSupport()
+      .enableHiveSupport()
       .getOrCreate()
   }
 
