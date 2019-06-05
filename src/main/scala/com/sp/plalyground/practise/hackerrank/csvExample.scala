@@ -1,4 +1,4 @@
-package com.sp.plalyground
+package com.sp.plalyground.practise.hackerrank
 
 import com.sp.plalyground.spark.SparkUtil
 

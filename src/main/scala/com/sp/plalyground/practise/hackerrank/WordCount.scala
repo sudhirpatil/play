@@ -1,6 +1,5 @@
-package com.sp.plalyground
+package com.sp.plalyground.practise.hackerrank
 
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 
 object WordCount extends App {
