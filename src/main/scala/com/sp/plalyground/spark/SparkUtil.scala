@@ -16,7 +16,7 @@ object SparkUtil {
     SparkSession.builder()
       .master(master)
       .appName(appName)
-      .enableHiveSupport()
+//      .enableHiveSupport()
       .getOrCreate()
   }
 
