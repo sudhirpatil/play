@@ -95,7 +95,6 @@ object UrbanForestTrail extends App {
     row.getString(row.fieldIndex("gcc_code16"))
   }).foreach(println)
 
-
   case class Area(areasqkm16: Double, gcc_code16:String, gcc_name16:String, sa1_7dig16:String, sa1_main16:String, sa2_5dig16:String,
                   sa2_main16:String, sa2_name16:String, sa3_code16:String, sa3_name16:String, sa4_code16:String, sa4_name16:String,
                   ste_code16:String, ste_name16:String, geo_type: String, multiPolygon: MultiPolygon)
