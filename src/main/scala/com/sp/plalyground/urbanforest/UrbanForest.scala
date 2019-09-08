@@ -1,30 +1,17 @@
 package com.sp.plalyground.urbanforest
 
-import org.apache.spark.sql.DataFrame
-
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql._
+import org.apache.spark.broadcast.Broadcast
+import org.apache.spark.rdd.RDD
+import org.apache.spark.sql.expressions.UserDefinedFunction
+import au.com.eliiza.urbanforest._
 
 object UrbanForest {
-  @transient lazy val master = System.getProperty("spark.master", "local[4]")
-  @transient lazy val spark = getSpark()
-
-  import org.apache.spark.sql.SparkSession
-
-  def getSpark(): SparkSession = {
-    SparkSession.builder()
-    .master(master)
-    .appName("UrabanForest")
-    .getOrCreate()
-  }
-
-  import org.apache.spark.broadcast.Broadcast
-  import org.apache.spark.rdd.RDD
-  import org.apache.spark.sql.expressions.UserDefinedFunction
-  import au.com.eliiza.urbanforest._
-
+  @transient lazy val spark: SparkSession = getSpark()
   @transient lazy val sc = spark.sparkContext
   import spark.implicits._
-  import org.apache.spark.sql.functions._
-  import org.apache.spark.sql._
 
   def main(args: Array[String]) = {
     if (args.length != 2) {
@@ -35,16 +22,24 @@ object UrbanForest {
     val forestFilePath = args(1)
 
     // Parse forest text files and get RDD with MultiPolygons
-    val forestPolygons: RDD[(String, MultiPolygon)] = parseForestFiles(forestFilePath) //"/Users/sudhirpatil/code/urbanforest/src/main/Resources/challenge-urban-forest/melb_urban_forest_2016.txt/part-00000")
+    val forestPolygons: RDD[(String, MultiPolygon)] = parseForestFiles(forestFilePath)
     // Read Stat Area json & agg for coordinates and area at Level 2 Statistical Areas
-    val statLevel2Df = getStatAreaLevel2(statAreaFilePath) //"/Users/sudhirpatil/code/urbanforest/src/main/Resources/challenge-urban-forest/melb_inner_2016.json")
+    val statLevel2Df = getStatAreaLevel2(statAreaFilePath)
     // Convert Stat Area coordinates to Multipolygon
     val statAreaPolygons: RDD[(String, MultiPolygon)] = getStatAreaPolygons(statLevel2Df)
     // Get forest area in each Suburb
     val greenAreaDf = getGreenAreaInSA(statAreaPolygons, forestPolygons)
     // suburbs ordered by ratio of green cover area
     val greenestAreas = getGreenestAreas(statLevel2Df, greenAreaDf)
-    greenestAreas.show(false)
+    greenestAreas.show(10,false)
+  }
+
+  def getSpark(): SparkSession = {
+    val master = System.getProperty("spark.master", "local[4]")
+    SparkSession.builder()
+      .master(master)
+      .appName("UrabanForest")
+      .getOrCreate()
   }
 
   // Parse forest text files and get RDD with MultiPolygons
@@ -58,7 +53,7 @@ object UrbanForest {
       csv(forestFilePath)
 
     // Create RDD Multipolygons from Dataframe
-    getForestPolygons(forestDf)
+    getForestPolygons(forestDf.limit(100))
   }
 
   // get RDD (index, Multipolygons) from Forest DataFrame
