@@ -72,7 +72,7 @@ object UrbanForest {
   statAreaDf.show(1, false)
   // agg at sa2 level
   val statLevel2Df = statAreaDf.groupBy("sa2_main16","sa2_5dig16", "sa2_name16").
-    agg(collect_list("geometry.coordinates").alias("seq_multipolygon"))
+    agg(collect_list("geometry.coordinates").alias("seq_multipolygon"), sum("areasqkm16").alias("areasqkm16"))
 
   import org.apache.spark.sql._
   import spark.implicits._
@@ -104,8 +104,10 @@ object UrbanForest {
       filter(statArea => mayIntersect(fmPolygon, statArea._2)).
           map(statArea => (statArea._1, intersectionArea(statArea._2, fmPolygon))).
           filter(statArea => statArea._2  > 0.0 )
-  }).toDF("sa2_index", "intersect_area").
-    groupBy("sa2_index").sum("intersect_area")
+  }).toDF("sa2_main16", "intersect_area").
+    groupBy("sa2_main16").agg(sum("intersect_area").alias("green_area"))
+
+  statLevel2Df.join(greenAreaDf, "sa2_main16").select("sa2_main16","sa2_5dig16", "sa2_name16", "areasqkm16","green_area").show(false)
 
   //try cross join without broadcast, find out overlapping area and keep adding to total count
   // Get green area coverage by joining Stat Area and forest
