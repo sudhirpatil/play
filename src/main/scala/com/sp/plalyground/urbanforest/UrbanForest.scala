@@ -63,23 +63,18 @@ object UrbanForest {
     forestDf.rdd.map(row => {
       val index = row.getString(0)
       val polyPoints = row.getString(1)
+      // Pattern to Extract each loop in polygon as string
       val pattern = """\(.*?\)""".r
       val polygon: Polygon = pattern.
-        findAllIn(polyPoints).map(x => x.replace("(","").replace(")", "")). // Get iterator of each line (sequence of double)
+        // Extract each loop in polygon as string
+        findAllIn(polyPoints).map(x => x.replace("(","").replace(")", "")).
         map(loopStr => {
-          // Get Seq(Point) in each line
-//          val loop: Seq[Point] =
-            loopStr.split(" ").
-            map(_.toDouble).toSeq.
-            grouped(2).toSeq
-//            map(x => {
-//              // Create Point from sequence pair
-//              val point : Point = x
-//              //            println(point)
-//              point
-//            }).toList
-          //        println(loop(0) + "--" + loop(loop.size -1) )
-//          loop
+            // Convert to Seq[Double]
+            loopStr.split(" ").map(_.toDouble).toSeq.
+            // Get Point = Seq(Double)
+            grouped(2).
+            // Get Line = Seq[Point]
+            toSeq
         }).toSeq
       val multiPolygon: MultiPolygon = Seq(polygon)
       (index, multiPolygon)
