@@ -107,7 +107,11 @@ object UrbanForest {
   }).toDF("sa2_main16", "intersect_area").
     groupBy("sa2_main16").agg(sum("intersect_area").alias("green_area"))
 
-  statLevel2Df.join(greenAreaDf, "sa2_main16").select("sa2_main16","sa2_5dig16", "sa2_name16", "areasqkm16","green_area").show(false)
+  statLevel2Df.join(greenAreaDf, "sa2_main16").
+    select("sa2_main16","sa2_5dig16", "sa2_name16", "areasqkm16","green_area").
+    withColumn("green_area_ratio", col("green_area") / col("areasqkm16")).
+    orderBy(desc("green_area_ratio")).
+    show(false)
 
   //try cross join without broadcast, find out overlapping area and keep adding to total count
   // Get green area coverage by joining Stat Area and forest
