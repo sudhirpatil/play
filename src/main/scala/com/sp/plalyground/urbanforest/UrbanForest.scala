@@ -25,6 +25,7 @@ object UrbanForest {
   import spark.implicits._
   import org.apache.spark.sql.functions._
 
+  spark.sparkContext.setLogLevel("WARN")
   // Create RDD Multipolygons from urban forest text file
   val forestDf = spark.read.
     option("quote", "\"").
@@ -38,64 +39,73 @@ object UrbanForest {
   // get RDD (index, Multipolygons)
   import au.com.eliiza.urbanforest._
   //: RDD[(String, MultiPolygon)]
-  val forestPolygons = forestDf.limit(10).rdd.map(row => {
+  val forestPolygons = forestDf.limit(100).rdd.map(row => {
     val index = row.getString(0)
     val polyPoints = row.getString(1)
     val pattern = """\(.*?\)""".r
-
     val polygon: Polygon = pattern.
       findAllIn(polyPoints).map(x => x.replace("(","").replace(")", "")). // Get iterator of each line (sequence of double)
       map(loopStr => {
         // Get Seq(Point) in each line
-        val loop: Loop = loopStr.split(" ").
+        val loop: Seq[Point] = loopStr.split(" ").
           map(_.toDouble).toSeq.
-          combinations(2).
+          //          combinations(2).
+          grouped(2).
           map(x => {
             // Create Point from sequence pair
             val point : Point = x
+            //            println(point)
             point
-          }).toSeq
+          }).toList
+        //        println(loop(0) + "--" + loop(loop.size -1) )
         loop
-      }).toSeq
+      }).toList
     val multiPolygon: MultiPolygon = Seq(polygon)
     (index, multiPolygon)
   })
-//  val forestDf = forestPolygons.toDF("index", "forest_mpolygon")
+  //  forestPolygons.foreach(row => println("xx"))
+  //  val forestDf = forestPolygons.toDF("index", "forest_mpolygon")
 
   // get multipolygons for each area at level 2 of stat area
   val statAreaDf = spark.read.json("/Users/sudhirpatil/code/urbanforest/src/main/Resources/challenge-urban-forest/melb_inner_2016.json")
   statAreaDf.printSchema()
   statAreaDf.show(1, false)
   // agg at sa2 level
-  val statLevel2Df = statAreaDf.groupBy("sa2_main16").agg(collect_list("geometry.coordinates").alias("seq_multipolygon"))
+  val statLevel2Df = statAreaDf.groupBy("sa2_main16","sa2_5dig16", "sa2_name16").
+    agg(collect_list("geometry.coordinates").alias("seq_multipolygon"))
 
+  import org.apache.spark.sql._
+  import spark.implicits._
   // Convert coordinates to Multipolygon from grouped area at sa2
   val statAreaRdd = statLevel2Df.rdd.map(row => {
     val multiPolygons: Seq[MultiPolygon] = row.getSeq[MultiPolygon](row.fieldIndex("seq_multipolygon"))
-    (row.getString(row.fieldIndex("sa2_main16")), mergeMultiPolygons(multiPolygons: _*))
+    val mergePolygon = mergeMultiPolygons(multiPolygons: _*)
+    //    println(multiPolygons)
+    (row.getString(row.fieldIndex("sa2_main16")), mergePolygon)
   })
 
+  //  statAreaRdd.foreach(println)
+  //  forestPolygons.foreach(println)
   // Convert coordinates to Multipolygon from ungrouped stats area
   val statAreaAllRdd = statAreaDf.rdd.map(row => {
     val geoRow = row.getStruct(row.fieldIndex("geometry"))
     val coord: MultiPolygon = geoRow.getSeq[Polygon](geoRow.fieldIndex("coordinates"))
     (row.getString(row.fieldIndex("sa1_main16")), coord)
   })
-//  val areaPolyDf = statAreaRdd.toDF("gcc_code16","stat_mpolygon")
+  //  val areaPolyDf = statAreaRdd.toDF("gcc_code16","stat_mpolygon")
 
   // RDD with broadcast join
-  statAreaDf.select("sa1_main16", "geometry.coordinates").rdd.map(row => (row))
-  val statAreaBcast = sc.broadcast(statAreaAllRdd.collectAsMap())
-  forestPolygons.map(forestRow => {
+  //  statAreaDf.select("sa1_main16", "geometry.coordinates").rdd.map(row => (row))
+  val statAreaBcast = sc.broadcast(statAreaRdd.collectAsMap())
+  val greenAreaDf = forestPolygons.flatMap(forestRow => {
     val fmPolygon: MultiPolygon = forestRow._2
-    println(s"Starting forest : ${forestRow._1}")
-    val size = statAreaBcast.value.
-      filter(statArea => mayIntersect(statArea._2, fmPolygon)).size//.//foreach(statArea => println(s"intersection : ${statArea._1}"))
-    println(size)
-//      map(statArea => (statArea._1, intersectionArea(statArea._2, fmPolygon))).
-//      filter(statArea => statArea._2  > 0.0 ).foreach(statArea => println(s"intersection : ${statArea._2}"))
-    (0)
-  }).foreach(println)
+//    println(s"Starting forest : ${forestRow._1}")
+    statAreaBcast.value.
+      filter(statArea => mayIntersect(fmPolygon, statArea._2)).
+          map(statArea => (statArea._1, intersectionArea(statArea._2, fmPolygon))).
+          filter(statArea => statArea._2  > 0.0 )
+  }).toDF("sa2_index", "intersect_area").
+    groupBy("sa2_index").sum("intersect_area")
 
   //try cross join without broadcast, find out overlapping area and keep adding to total count
   // Get green area coverage by joining Stat Area and forest
