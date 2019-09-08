@@ -4,8 +4,6 @@ import org.apache.spark.sql.DataFrame
 
 
 object UrbanForest {
-  @transient lazy val log = org.apache.log4j.LogManager.getLogger("StructStreamingExample")
-  @transient lazy val appName = System.getProperty("SparkUtil.appName", "StructStreamingExample")
   @transient lazy val master = System.getProperty("spark.master", "local[4]")
   @transient lazy val spark = getSpark()
 
@@ -14,8 +12,7 @@ object UrbanForest {
   def getSpark(): SparkSession = {
     SparkSession.builder()
     .master(master)
-    .appName(appName)
-    //      .enableHiveSupport()
+    .appName("UrabanForest")
     .getOrCreate()
   }
 
@@ -43,7 +40,9 @@ object UrbanForest {
     val statLevel2Df = getStatAreaLevel2(statAreaFilePath) //"/Users/sudhirpatil/code/urbanforest/src/main/Resources/challenge-urban-forest/melb_inner_2016.json")
     // Convert Stat Area coordinates to Multipolygon
     val statAreaPolygons: RDD[(String, MultiPolygon)] = getStatAreaPolygons(statLevel2Df)
+    // Get forest area in each Suburb
     val greenAreaDf = getGreenAreaInSA(statAreaPolygons, forestPolygons)
+    // suburbs ordered by ratio of green cover area
     val greenestAreas = getGreenestAreas(statLevel2Df, greenAreaDf)
     greenestAreas.show(false)
   }
@@ -59,10 +58,10 @@ object UrbanForest {
       csv(forestFilePath)
 
     // Create RDD Multipolygons from Dataframe
-    getForestPolygons(forestDf.limit(10))
+    getForestPolygons(forestDf)
   }
 
-  // get RDD (index, Multipolygons) from Dataframe
+  // get RDD (index, Multipolygons) from Forest DataFrame
   def getForestPolygons(forestDf: DataFrame): RDD[(String, MultiPolygon)] ={
     forestDf.rdd.map(row => {
       val index = row.getString(0)
@@ -123,9 +122,12 @@ object UrbanForest {
       groupBy("sa2_main16").agg(sum("intersect_area").alias("green_area"))
   }
 
+  // Returns suburbs ordered by ratio of green area & add more columns for suburbs
   def getGreenestAreas(statLevel2Df: DataFrame, greenAreaDf: DataFrame): DataFrame = {
+    // Join to get more details about each suburb
     statLevel2Df.join(greenAreaDf, "sa2_main16").
       select("sa2_main16", "sa2_5dig16", "sa2_name16", "areasqkm16", "green_area").
+      // get green area ratio in each suburb
       withColumn("green_area_ratio", col("green_area") / col("areasqkm16")).
       orderBy(desc("green_area_ratio"))
   }
